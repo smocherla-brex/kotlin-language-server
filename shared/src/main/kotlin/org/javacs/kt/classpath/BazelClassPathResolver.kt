@@ -24,9 +24,9 @@ internal class BazelClassPathResolver(private val workspaceRoot: Path, private v
         }
     }
     private fun getClassPathsFromBazel() : Set<ClassPathEntry> {
-        LOG.debug { "Retrieving source jars for $packagePath" }
+        LOG.info { "Retrieving source jars for $packagePath" }
         val sourceJars = runBazelCquery(packagePath, CqueryMode.SOURCE_JARS)
-        LOG.debug { "Retrieving output jars for $packagePath" }
+        LOG.info { "Retrieving output jars for $packagePath" }
         val outputJars = runBazelCquery(packagePath, CqueryMode.OUTPUT_JARS)
         return outputJars.map {
             ClassPathEntry(
@@ -44,6 +44,7 @@ internal class BazelClassPathResolver(private val workspaceRoot: Path, private v
             CqueryMode.OUTPUT_JARS -> Resources.getResource("outputjars.cquery").path
         }
         val cmd = listOf("bazel", "cquery", "//$relPackagePath/...", "--output=starlark", "--starlark:file=${cqueryFile}")
+        LOG.info("Running bazel command : $cmd")
         val (output, errors) = execAndReadStdoutAndStderr(cmd, workspaceRoot)
         if (output.isEmpty()) {
             throw KotlinLSException("Error running bazel cquery: $errors")
