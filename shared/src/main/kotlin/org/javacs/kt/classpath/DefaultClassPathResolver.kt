@@ -55,3 +55,4 @@ private fun asClassPathProvider(path: Path): ClassPathResolver? =
     MavenClassPathResolver.maybeCreate(path)
         ?: GradleClassPathResolver.maybeCreate(path)
         ?: ShellClassPathResolver.maybeCreate(path)
+        ?: BazelClassPathResolver.maybeCreate(path)

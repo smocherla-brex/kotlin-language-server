@@ -1,0 +1,7 @@
+def format(target):
+    p = providers(target)
+    if "JavaInfo" in p:
+        jars = [s.class_jar.path for s in p["JavaInfo"].java_outputs]
+        transitive_jars = [t.path for t in p["JavaInfo"].transitive_compile_time_jars.to_list()]
+        return "\n".join(jars + transitive_jars)
+    return ""
