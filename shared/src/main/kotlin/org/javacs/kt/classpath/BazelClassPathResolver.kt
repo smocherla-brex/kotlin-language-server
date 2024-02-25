@@ -45,7 +45,7 @@ internal class BazelClassPathResolver(private val workspaceRoot: Path, private v
         }
         val cmd = listOf("bazel", "cquery", "//$relPackagePath/...", "--output=starlark", "--starlark:file=${cqueryFile}")
         val (output, errors) = execAndReadStdoutAndStderr(cmd, workspaceRoot)
-        if (errors.isNotEmpty()) {
+        if (output.isEmpty()) {
             throw KotlinLSException("Error running bazel cquery: $errors")
         }
         return output.split("\n").filter { it.isNotEmpty() }
@@ -60,7 +60,7 @@ internal class BazelClassPathResolver(private val workspaceRoot: Path, private v
         private fun getWorkspaceRoot(path: Path) : Path {
             val cmd = listOf("bazel", "info", "workspace")
             val (output, errors) = execAndReadStdoutAndStderr(cmd, path)
-            if (errors.isNotEmpty()) {
+            if (output.isEmpty()) {
                 throw KotlinLSException("Could not determine Bazel workspace root: $errors")
             }
             return Paths.get(output)
