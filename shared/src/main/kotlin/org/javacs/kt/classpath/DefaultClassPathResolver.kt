@@ -2,16 +2,22 @@ package org.javacs.kt.classpath
 
 import org.javacs.kt.LOG
 import org.jetbrains.exposed.sql.Database
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.PathMatcher
-import java.nio.file.FileSystems
 
 fun defaultClassPathResolver(workspaceRoots: Collection<Path>, db: Database? = null): ClassPathResolver {
     val childResolver = WithStdlibResolver(
         ShellClassPathResolver.global(workspaceRoots.firstOrNull())
-            .or(workspaceRoots.asSequence().flatMap { workspaceResolvers(it) }.joined)
+            .or(BazelClassPathResolver.global(workspaceRoots)),
     ).or(BackupClassPathResolver)
 
+    if (childResolver is BazelClassPathResolver) {
+        LOG.info { "child resolver is bazel" }
+        LOG.info {"class path entries are ${childResolver.classpath}"}
+    } else {
+        LOG.info{"child resolver is ${childResolver.resolverType}"}
+    }
     return db?.let { CachedClassPathResolver(childResolver, it) } ?: childResolver
 }
 
@@ -37,17 +43,21 @@ private fun ignoredPathPatterns(root: Path, gitignore: Path): List<PathMatcher> 
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() && !it.startsWith("#") }
         ?.map { it.removeSuffix("/") }
-        ?.let { it + listOf(
-            // Patterns that are ignored by default
-            ".git"
-        ) }
-        ?.mapNotNull { try {
-            LOG.debug("Adding ignore pattern '{}' from {}", it, gitignore)
-            FileSystems.getDefault().getPathMatcher("glob:$root**/$it")
-        } catch (e: Exception) {
-            LOG.warn("Did not recognize gitignore pattern: '{}' ({})", it, e.message)
-            null
-        } }
+        ?.let {
+            it + listOf(
+                // Patterns that are ignored by default
+                ".git",
+            )
+        }
+        ?.mapNotNull {
+            try {
+                LOG.debug("Adding ignore pattern '{}' from {}", it, gitignore)
+                FileSystems.getDefault().getPathMatcher("glob:$root**/$it")
+            } catch (e: Exception) {
+                LOG.warn("Did not recognize gitignore pattern: '{}' ({})", it, e.message)
+                null
+            }
+        }
         ?: emptyList()
 
 /** Tries to create a classpath resolver from a file using as many sources as possible */
@@ -55,4 +65,3 @@ private fun asClassPathProvider(path: Path): ClassPathResolver? =
     MavenClassPathResolver.maybeCreate(path)
         ?: GradleClassPathResolver.maybeCreate(path)
         ?: ShellClassPathResolver.maybeCreate(path)
-        ?: BazelClassPathResolver.maybeCreate(path)

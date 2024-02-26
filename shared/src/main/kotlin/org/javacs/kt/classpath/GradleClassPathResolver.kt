@@ -91,7 +91,7 @@ private fun readDependenciesViaGradleCLI(projectDirectory: Path, gradleScripts: 
 }
 
 private fun findGradleCLIDependencies(command: List<String>, projectDirectory: Path): Set<Path>? {
-    val (result, errors) = execAndReadStdoutAndStderr(command, projectDirectory)
+    val (result, errors, _) = execAndReadStdoutAndStderr(command, projectDirectory)
     if ("FAILURE: Build failed" in errors) {
         LOG.warn("Gradle task failed: {}", errors)
     } else {

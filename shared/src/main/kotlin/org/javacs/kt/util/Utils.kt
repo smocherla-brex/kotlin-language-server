@@ -12,7 +12,7 @@ fun execAndReadStdout(shellCommand: List<String>, directory: Path): String {
     return stdout.bufferedReader().use { it.readText() }
 }
 
-fun execAndReadStdoutAndStderr(shellCommand: List<String>, directory: Path): Pair<String, String> {
+fun execAndReadStdoutAndStderr(shellCommand: List<String>, directory: Path): Triple<String, String, Int> {
     val process = ProcessBuilder(shellCommand).directory(directory.toFile()).start()
     val stdout = process.inputStream
     val stderr = process.errorStream
@@ -24,7 +24,7 @@ fun execAndReadStdoutAndStderr(shellCommand: List<String>, directory: Path): Pai
     errorsThread.start()
     outputThread.join()
     errorsThread.join()
-    return Pair(output, errors)
+    return Triple(output, errors, process.exitValue())
 }
 
 inline fun withCustomStdout(delegateOut: PrintStream, task: () -> Unit) {
