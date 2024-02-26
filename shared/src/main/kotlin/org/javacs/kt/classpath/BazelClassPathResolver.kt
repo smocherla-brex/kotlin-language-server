@@ -44,6 +44,7 @@ internal class BazelClassPathResolver(private val workspaceRoots: Collection<Pat
         return outputJars.map {
             ClassPathEntry(
                 compiledJar = Paths.get(bazelWorkspaceRoot.toString(), it),
+                // TODO: map source jar here correctly from sourceJars
                 sourceJar = null,
             )
         }.toSet()
