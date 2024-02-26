@@ -14,7 +14,6 @@ enum class CqueryMode {
 internal class BazelClassPathResolver(private val workspaceRoots: Collection<Path>) : ClassPathResolver {
     override val resolverType: String = "Bazel"
     private val bazelWorkspaceRoot = getBazelWorkspaceRoot()
-    private val bazelPackages = getBazelPackages()
 
     override val classpath: Set<ClassPathEntry> get(): Set<ClassPathEntry> {
         val paths = getClassPathsFromBazel()
@@ -50,8 +49,12 @@ internal class BazelClassPathResolver(private val workspaceRoots: Collection<Pat
         }.toSet()
     }
 
+    /**
+     * Runs bazel cquery in starlark mode, to fetch either source jars or compile jars
+     * of the outputs and their transitive dependencies in the specified packages,
+     */
     private fun runBazelCquery(packages: List<String>, cqueryMode: CqueryMode): List<String> {
-        val packageScopes = packages.take(5).map {
+        val packageScopes = packages.map {
             "//$it:all"
         }.joinToString(" ")
         val cqueryFile = when (cqueryMode) {
@@ -68,6 +71,9 @@ internal class BazelClassPathResolver(private val workspaceRoots: Collection<Pat
         return output.split("\n").filter { it.isNotEmpty() }
     }
 
+    /**
+     * Retrieves the list of Bazel packages with atleast one kotlin build target
+     */
     private fun getKotlinBazelPackages(): List<String> {
         val cmd = listOf("bazel", "query", "--output=package", "'kind(kt_jvm_library, //...)'")
         val (output, errors, exitCode) = execAndReadStdoutAndStderr(cmd, bazelWorkspaceRoot)
@@ -82,6 +88,11 @@ internal class BazelClassPathResolver(private val workspaceRoots: Collection<Pat
             return workspaceRoots.any { Paths.get(it.toString(), "WORKSPACE").exists() }
         }
 
+        /**
+         * BazelClassPathResolver is global because we can run 1 query per workspace at a given time
+         * and we can get all the information for all packages in 1 query. It doesn't make sense
+         * to run queries at each package level.
+         */
         fun global(workspaceRoots: Collection<Path>): ClassPathResolver =
             if (isBazelProject(workspaceRoots)) {
                 BazelClassPathResolver(workspaceRoots)
